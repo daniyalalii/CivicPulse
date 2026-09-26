@@ -1,0 +1,101 @@
+# .github/workflows/ci.yml
+name: CI
+on:
+  pull_request: { branches: [main] }
+  push: { branches: [dev] }
+permissions:
+  contents: read
+
+jobs:
+  lint-and-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff mypy -r backend/requirements.txt
+      - run: ruff check backend/app
+      - run: mypy backend/app
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: cd frontend && npm ci && npx eslint . && npx tsc --noEmit
+
+  test-backend:
+    runs-on: ubuntu-latest
+    env:
+      TRIAGE_PROVIDER: simulated
+      DATABASE_URL: postgresql+asyncpg://postgres:test@localhost:5432/civicpulse
+      REDIS_URL: redis://localhost:6379
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: test, POSTGRES_DB: civicpulse }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r backend/requirements.txt pytest pytest-asyncio pytest-cov fakeredis
+      - run: cd backend && alembic upgrade head
+      - run: cd backend && pytest --cov=app --cov-fail-under=65 tests/
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: cd frontend && npm ci && npx vitest run
+
+  build:
+    needs: [lint-and-type, test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/build-push-action@v6
+        with: { context: backend, push: false, tags: civicpulse-backend:ci }
+      - uses: docker/build-push-action@v6
+        with: { context: frontend, push: false, tags: civicpulse-frontend:ci }
+
+  scan:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t civicpulse-backend:ci backend
+      - uses: aquasecurity/trivy-action@0.24.0
+        with: { image-ref: "civicpulse-backend:ci", severity: "HIGH,CRITICAL", exit-code: "1", ignore-unfixed: true }
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: yokawasa/action-setup-kube-tools@v0.11.1
+        with: { kustomize: "5.4.3", kubeconform: "0.6.7" }
+      - run: kustomize build k8s/overlays/prod | kubeconform -strict -summary
+
+  integration:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          echo "POSTGRES_PASSWORD=test" > .env
+          echo "TRIAGE_PROVIDER=simulated" >> .env
+          docker compose up -d --build
+      - run: for i in $(seq 1 30); do curl -sf http://localhost:8000/ready && break; sleep 2; done
+      - name: POST a complaint and read it back
+        run: |
+          RESP=$(curl -s -X POST http://localhost:8000/api/complaints -H "Content-Type: application/json" \
+            -d '{"text":"burst pipe flooding the street near my house","location":"Test Street 1"}')
+          echo "$RESP" | jq -e '.category'
+      - name: Assert X-Cache goes MISS then HIT
+        run: |
+          curl -si http://localhost:8000/api/stats | grep -i "^X-Cache: MISS"
+          curl -si http://localhost:8000/api/stats | grep -i "^X-Cache: HIT"
+      - run: docker compose down -v
