@@ -1,4 +1,3 @@
-from app.domain import Category, Priority
 from app.providers.triage.base import TriageResult
 from app.providers.triage.rules import RuleBasedTriage
 
