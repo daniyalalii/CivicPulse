@@ -4,9 +4,23 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.database import get_session
 from app.domain import Category, Priority, Status
 from app.main import app
 from app.repositories.models import Complaint
+
+
+async def mock_get_session():
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = AsyncMock()
+    yield mock_session
+
+
+@pytest.fixture(autouse=True)
+def override_dependencies():
+    app.dependency_overrides[get_session] = mock_get_session
+    yield
+    app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
@@ -24,10 +38,9 @@ async def test_ready_endpoint_success():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
-        with patch("app.routes.system.get_session"):
-            response = await client.get("/ready")
-            assert response.status_code == 200
-            assert response.json()["status"] == "ready"
+        response = await client.get("/ready")
+        assert response.status_code == 200
+        assert response.json()["status"] == "ready"
 
 
 @pytest.mark.asyncio
@@ -104,7 +117,6 @@ async def test_invalid_status_transition_route_returns_409():
             "app.services.complaints_service.get_complaint",
             return_value=fake_complaint,
         ):
-            # Attempting to move from RESOLVED -> OPEN
             response = await client.patch(
                 f"/api/complaints/{fake_complaint.id}/status",
                 json={"status": "open"},
