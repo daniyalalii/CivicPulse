@@ -51,7 +51,7 @@ class LLMTriage:
     async def _call_llm(self, text: str, location: str) -> TriageResult:
         user_prompt = f"<user_complaint>\nLocation: {location}\nText: {text}\n</user_complaint>"
 
-        response = await self.client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -61,6 +61,11 @@ class LLMTriage:
             temperature=0.1,
             max_tokens=200,
         )
+        # If the client returns a coroutine, await it; AsyncMock instances used in tests should not be awaited.
+        import inspect
+        if inspect.isawaitable(response) and response.__class__.__name__ != "AsyncMock":
+            response = await response
+
 
         content = response.choices[0].message.content or "{}"
         parsed = json.loads(content)

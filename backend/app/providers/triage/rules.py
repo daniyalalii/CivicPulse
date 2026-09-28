@@ -9,16 +9,19 @@ class RuleBasedTriage:
         lower_text = text.lower()
 
         # Category determination
-        if any(k in lower_text for k in ["water", "leak", "pipe", "flooding", "drain", "tap", "tanker"]):
+        # Prioritize sanitation for sewer-related complaints before water detection
+        if "sewer" in lower_text:
+            category = Category.SANITATION
+        elif any(k in lower_text for k in ["water", "leak", "pipe", "flooding", "drain", "tap", "tanker"]):
             category = Category.WATER
         elif any(k in lower_text for k in ["electricity", "voltage", "transformer", "power", "feeder", "wire", "spark"]):
             category = Category.ELECTRICITY
         elif any(k in lower_text for k in ["kachra", "garbage", "sanitation", "sewer", "manhole", "badboo", "waste", "clean"]):
             category = Category.SANITATION
-        elif any(k in lower_text for k in ["pothole", "road", "pavement", "street", "traffic", "speed breaker"]):
-            category = Category.ROADS
         elif any(k in lower_text for k in ["streetlight", "light", "dark", "bulb"]):
             category = Category.STREETLIGHTS
+        elif any(k in lower_text for k in ["pothole", "road", "pavement", "street", "traffic", "speed breaker"]):
+            category = Category.ROADS
         else:
             category = Category.OTHER
 

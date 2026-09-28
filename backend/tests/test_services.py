@@ -33,9 +33,8 @@ async def test_get_complaint_not_found():
     mock_session = AsyncMock()
     fake_id = uuid.uuid4()
 
-    with patch("app.repositories.complaints_repo.get_complaint_by_id", return_value=None):
-        with pytest.raises(ComplaintNotFound):
-            await complaints_service.get_complaint(mock_session, fake_id)
+    with patch("app.repositories.complaints_repo.get_complaint_by_id", return_value=None), pytest.raises(ComplaintNotFound):  # noqa: SIM117
+        await complaints_service.get_complaint(mock_session, fake_id)
 
 
 @pytest.mark.asyncio

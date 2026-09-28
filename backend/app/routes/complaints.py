@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["complaints"])
 )
 async def create_complaint(
     payload: ComplaintCreate,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     return await complaints_service.create_and_triage_complaint(
         session=session,
@@ -37,19 +37,19 @@ async def create_complaint(
 @router.get("/complaints/{complaint_id}", response_model=ComplaintResponse)
 async def get_complaint(
     complaint_id: uuid.UUID,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     return await complaints_service.get_complaint(session, complaint_id)
 
 
 @router.get("/complaints", response_model=ComplaintListResponse)
 async def list_complaints(
-    category: Category | None = Query(None),
-    priority: Priority | None = Query(None),
-    status_filter: Status | None = Query(None, alias="status"),
+    category: Category | None = Query(None),  # noqa: B008
+    priority: Priority | None = Query(None),  # noqa: B008
+    status_filter: Status | None = Query(None, alias="status"),  # noqa: B008
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     items, total = await complaints_service.list_complaints_service(
         session=session,
@@ -71,7 +71,7 @@ async def list_complaints(
 async def update_complaint_status(
     complaint_id: uuid.UUID,
     payload: ComplaintStatusUpdate,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     return await complaints_service.update_complaint_status_service(
         session=session,
@@ -83,7 +83,7 @@ async def update_complaint_status(
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
     response: Response,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ):
     response.headers["X-Cache"] = "MISS"
     stats = await complaints_service.get_complaint_stats_service(session)
