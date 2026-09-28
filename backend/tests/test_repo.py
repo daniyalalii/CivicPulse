@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -23,14 +23,14 @@ async def test_repo_create_and_get():
     )
 
     mock_session = AsyncMock()
-    mock_session.add = AsyncMock()
+    mock_session.add = MagicMock()
     mock_session.commit = AsyncMock()
     mock_session.refresh = AsyncMock()
 
     created = await complaints_repo.create_complaint(mock_session, complaint)
     assert created.id == fake_id
 
-    mock_result = AsyncMock()
+    mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = complaint
     mock_session.execute.return_value = mock_result
 
@@ -42,11 +42,12 @@ async def test_repo_create_and_get():
 @pytest.mark.asyncio
 async def test_repo_list_complaints():
     mock_session = AsyncMock()
-    mock_count_result = AsyncMock()
+    mock_count_result = MagicMock()
     mock_count_result.scalar_one.return_value = 1
-    
-    mock_items_result = AsyncMock()
-    mock_items_result.scalars.return_value.all.return_value = [
+
+    mock_items_result = MagicMock()
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = [
         Complaint(
             id=uuid.uuid4(),
             text="Text",
@@ -58,6 +59,7 @@ async def test_repo_list_complaints():
             triage_latency_ms=10,
         )
     ]
+    mock_items_result.scalars.return_value = mock_scalars
 
     mock_session.execute.side_effect = [mock_count_result, mock_items_result]
 
@@ -83,7 +85,7 @@ async def test_repo_update_status():
     )
 
     mock_session = AsyncMock()
-    mock_result = AsyncMock()
+    mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = complaint
     mock_session.execute.return_value = mock_result
 
@@ -95,14 +97,14 @@ async def test_repo_update_status():
 @pytest.mark.asyncio
 async def test_repo_stats():
     mock_session = AsyncMock()
-    
-    mock_cat_res = AsyncMock()
+
+    mock_cat_res = MagicMock()
     mock_cat_res.all.return_value = [(Category.WATER, 2)]
 
-    mock_prio_res = AsyncMock()
+    mock_prio_res = MagicMock()
     mock_prio_res.all.return_value = [(Priority.HIGH, 2)]
 
-    mock_stat_res = AsyncMock()
+    mock_stat_res = MagicMock()
     mock_stat_res.all.return_value = [(Status.OPEN, 2)]
 
     mock_session.execute.side_effect = [mock_cat_res, mock_prio_res, mock_stat_res]

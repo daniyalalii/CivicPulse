@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,7 +12,8 @@ from app.repositories.models import Complaint
 
 async def mock_get_session():
     mock_session = AsyncMock()
-    mock_session.execute.return_value = AsyncMock()
+    mock_result = MagicMock()
+    mock_session.execute.return_value = mock_result
     yield mock_session
 
 
