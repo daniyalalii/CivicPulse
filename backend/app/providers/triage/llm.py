@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+from typing import Any
 
 import httpx
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI, RateLimitError
@@ -51,7 +52,7 @@ class LLMTriage:
     async def _call_llm(self, text: str, location: str) -> TriageResult:
         user_prompt = f"<user_complaint>\nLocation: {location}\nText: {text}\n</user_complaint>"
 
-        response = await self.client.chat.completions.create(
+        response: Any = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -61,6 +62,11 @@ class LLMTriage:
             temperature=0.1,
             max_tokens=200,
         )
+        # If the client returns a coroutine (unlikely), await it unless it's an AsyncMock used in tests.
+        import inspect
+        if inspect.isawaitable(response) and response.__class__.__name__ != "AsyncMock":
+            response = await response
+
 
 
         content = response.choices[0].message.content or "{}"

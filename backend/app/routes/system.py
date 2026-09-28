@@ -1,7 +1,6 @@
-from typing import Union, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends, Response, status
-
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
