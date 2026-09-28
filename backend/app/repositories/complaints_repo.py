@@ -1,6 +1,6 @@
 import uuid
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple, Any
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,7 @@ async def create_complaint(session: AsyncSession, complaint: Complaint) -> Compl
 
 async def get_complaint_by_id(
     session: AsyncSession, complaint_id: uuid.UUID
-) -> Optional[Complaint]:
+) -> Complaint | None:
     """Fetches a complaint by its primary key ID."""
     stmt = select(Complaint).where(Complaint.id == complaint_id)
     result = await session.execute(stmt)
@@ -28,12 +28,12 @@ async def get_complaint_by_id(
 
 async def list_complaints(
     session: AsyncSession,
-    category: Optional[Category] = None,
-    priority: Optional[Priority] = None,
-    status: Optional[Status] = None,
+    category: Category | None = None,
+    priority: Priority | None = None,
+    status: Status | None = None,
     page: int = 1,
     page_size: int = 20,
-) -> Tuple[List[Complaint], int]:
+) -> tuple[list[Complaint], int]:
     """Lists complaints with pagination and filtering, returning (items, total_count)."""
     stmt = select(Complaint)
     if category is not None:
@@ -57,20 +57,20 @@ async def list_complaints(
 
 async def update_complaint_status(
     session: AsyncSession, complaint_id: uuid.UUID, new_status: Status
-) -> Optional[Complaint]:
+) -> Complaint | None:
     """Updates the status of an existing complaint."""
     complaint = await get_complaint_by_id(session, complaint_id)
     if not complaint:
         return None
 
     complaint.status = new_status
-    complaint.updated_at = datetime.now(timezone.utc)
+    complaint.updated_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(complaint)
     return complaint
 
 
-async def get_complaint_stats(session: AsyncSession) -> Dict[str, Any]:
+async def get_complaint_stats(session: AsyncSession) -> dict[str, Any]:
     """Computes aggregate metrics by category, priority, and status."""
     cat_stmt = select(Complaint.category, func.count(Complaint.id)).group_by(Complaint.category)
     prio_stmt = select(Complaint.priority, func.count(Complaint.id)).group_by(Complaint.priority)

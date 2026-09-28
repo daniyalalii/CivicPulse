@@ -37,13 +37,13 @@ async def liveness_health_check():
 
 
 @router.get("/ready")
-async def readiness_check(session: AsyncSession = Depends(get_session)):
+async def readiness_check(session: AsyncSession = Depends(get_session)):  # noqa: B008
     """Readiness probe. Checks Postgres connection."""
     errors = {}
 
     try:
         await session.execute(text("SELECT 1"))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         errors["postgres"] = str(exc)
 
     if errors:

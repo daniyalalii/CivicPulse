@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict, Set
 
 
 class Category(str, Enum):
@@ -33,7 +32,7 @@ class InvalidTransitionError(Exception):
         )
 
 
-ALLOWED_TRANSITIONS: Dict[Status, Set[Status]] = {
+ALLOWED_TRANSITIONS: dict[Status, set[Status]] = {
     Status.OPEN: {Status.IN_PROGRESS, Status.REJECTED},
     Status.IN_PROGRESS: {Status.RESOLVED, Status.REJECTED},
     Status.RESOLVED: set(),

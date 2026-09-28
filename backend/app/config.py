@@ -1,4 +1,4 @@
-from typing import List
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     triage_provider: str = "simulated"
     groq_api_key: str = ""
     groq_model: str = "llama-3.1-8b-instant"
-    cors_origins: List[str] = ["*"]
+    cors_origins: list[str] = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,9 +44,9 @@ async def get_complaint(
 
 @router.get("/complaints", response_model=ComplaintListResponse)
 async def list_complaints(
-    category: Optional[Category] = Query(None),
-    priority: Optional[Priority] = Query(None),
-    status_filter: Optional[Status] = Query(None, alias="status"),
+    category: Category | None = Query(None),
+    priority: Priority | None = Query(None),
+    status_filter: Status | None = Query(None, alias="status"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),

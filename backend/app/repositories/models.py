@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Index, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
@@ -22,7 +21,7 @@ class Complaint(Base):
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
     location: Mapped[str] = mapped_column(String(200), nullable=False)
-    reporter_contact: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    reporter_contact: Mapped[str | None] = mapped_column(String(200), nullable=True)
     category: Mapped[Category] = mapped_column(
         SQLEnum(Category, name="category_enum"), nullable=False
     )
@@ -32,20 +31,20 @@ class Complaint(Base):
     status: Mapped[Status] = mapped_column(
         SQLEnum(Status, name="status_enum"), nullable=False, default=Status.OPEN
     )
-    ai_summary: Mapped[Optional[str]] = mapped_column(String(140), nullable=True)
+    ai_summary: Mapped[str | None] = mapped_column(String(140), nullable=True)
     triaged_by: Mapped[str] = mapped_column(String(50), nullable=False)
     triage_latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         index=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     __table_args__ = (

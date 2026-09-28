@@ -1,11 +1,11 @@
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain import ALLOWED_TRANSITIONS, InvalidTransitionError, Status, Category, Priority
+from app.domain import ALLOWED_TRANSITIONS, Category, InvalidTransitionError, Priority, Status
 from app.exceptions import ComplaintNotFound
 from app.providers.triage.base import TriageProvider, TriageResult
 from app.providers.triage.factory import get_triage_provider
@@ -33,8 +33,8 @@ async def create_and_triage_complaint(
     session: AsyncSession,
     text: str,
     location: str,
-    reporter_contact: Optional[str] = None,
-    provider_override: Optional[TriageProvider] = None,
+    reporter_contact: str | None = None,
+    provider_override: TriageProvider | None = None,
 ) -> Complaint:
     """Orchestrates complaint triage and persistence.
 
@@ -46,7 +46,7 @@ async def create_and_triage_complaint(
     try:
         triage_res: TriageResult = await provider.triage(text, location)
         triaged_by = getattr(provider, "name", "unknown")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning(
             "Triage provider '%s' failed for complaint; falling back to rules: %s",
             getattr(provider, "name", "unknown"),
@@ -87,12 +87,12 @@ async def get_complaint(session: AsyncSession, complaint_id: uuid.UUID) -> Compl
 
 async def list_complaints_service(
     session: AsyncSession,
-    category: Optional[Category] = None,
-    priority: Optional[Priority] = None,
-    status: Optional[Status] = None,
+    category: Category | None = None,
+    priority: Priority | None = None,
+    status: Status | None = None,
     page: int = 1,
     page_size: int = 20,
-) -> Tuple[List[Complaint], int]:
+) -> tuple[list[Complaint], int]:
     return await complaints_repo.list_complaints(
         session=session,
         category=category,
@@ -114,5 +114,5 @@ async def update_complaint_status_service(
     return updated
 
 
-async def get_complaint_stats_service(session: AsyncSession) -> Dict[str, Any]:
+async def get_complaint_stats_service(session: AsyncSession) -> dict[str, Any]:
     return await complaints_repo.get_complaint_stats(session)

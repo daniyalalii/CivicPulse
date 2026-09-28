@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.domain import Category, Priority
 from app.providers.triage.rules import RuleBasedTriage

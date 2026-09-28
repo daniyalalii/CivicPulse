@@ -1,5 +1,6 @@
 import pytest
-from app.domain import ALLOWED_TRANSITIONS, InvalidTransitionError, Status
+
+from app.domain import InvalidTransitionError, Status
 from app.services.complaints_service import validate_status_transition
 
 

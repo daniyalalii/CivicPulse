@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from pydantic import BaseModel, Field
 
 from app.domain import Category, Priority
