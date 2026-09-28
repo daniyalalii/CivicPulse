@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(InvalidTransitionError)  # type: ignore[misc]
+@app.exception_handler(InvalidTransitionError)  
 async def invalid_transition_handler(request: Request, exc: InvalidTransitionError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
@@ -45,7 +45,7 @@ async def invalid_transition_handler(request: Request, exc: InvalidTransitionErr
     )
 
 
-@app.exception_handler(ComplaintNotFound)  # type: ignore[misc]
+@app.exception_handler(ComplaintNotFound) 
 async def complaint_not_found_handler(request: Request, exc: ComplaintNotFound) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -53,7 +53,7 @@ async def complaint_not_found_handler(request: Request, exc: ComplaintNotFound) 
     )
 
 
-@app.exception_handler(RateLimited)  # type: ignore[misc]
+@app.exception_handler(RateLimited)  
 async def rate_limited_handler(request: Request, exc: RateLimited) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
