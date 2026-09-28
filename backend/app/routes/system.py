@@ -32,13 +32,13 @@ FALLBACK_COUNTER = Counter(
 )
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
+@router.get("/health", status_code=status.HTTP_200_OK)  # type: ignore[misc]
 async def liveness_health_check() -> dict[str, str]:
     """Liveness probe. MUST NOT touch the database."""
     return {"status": "healthy", "service": "civicpulse-backend"}
 
 
-@router.get("/ready", response_model=None)
+@router.get("/ready", response_model=None)  # type: ignore[misc]
 async def readiness_check(session: AsyncSession = Depends(get_session)) -> dict[str, str] | Response:  # noqa: B008
     """Readiness probe. Checks Postgres connection."""
     errors = {}
@@ -58,13 +58,13 @@ async def readiness_check(session: AsyncSession = Depends(get_session)) -> dict[
     return {"status": "ready", "database": "connected"}
 
 
-@router.get("/metrics")
+@router.get("/metrics")  # type: ignore[misc]
 async def get_metrics() -> Response:
     """Prometheus metrics endpoint."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-@router.get("/api/meta/providers")
+@router.get("/api/meta/providers")  # type: ignore[misc]
 async def get_provider_meta() -> dict[str, Any]:
     """Observability endpoint surfacing current provider configuration."""
     return {

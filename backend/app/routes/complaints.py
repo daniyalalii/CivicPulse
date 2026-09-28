@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api", tags=["complaints"])
     "/complaints",
     response_model=ComplaintResponse,
     status_code=status.HTTP_201_CREATED,
-)
+)  # type: ignore[misc]
 async def create_complaint(
     payload: ComplaintCreate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
@@ -35,7 +35,7 @@ async def create_complaint(
     return ComplaintResponse.from_orm(complaint)
 
 
-@router.get("/complaints/{complaint_id}", response_model=ComplaintResponse)
+@router.get("/complaints/{complaint_id}", response_model=ComplaintResponse)  # type: ignore[misc]
 async def get_complaint(
     complaint_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),  # noqa: B008
@@ -44,7 +44,7 @@ async def get_complaint(
     return ComplaintResponse.from_orm(complaint)
 
 
-@router.get("/complaints", response_model=ComplaintListResponse)
+@router.get("/complaints", response_model=ComplaintListResponse)  # type: ignore[misc]
 async def list_complaints(
     category: Category | None = Query(None),  # noqa: B008
     priority: Priority | None = Query(None),  # noqa: B008
@@ -71,7 +71,7 @@ async def list_complaints(
     )
 
 
-@router.patch("/complaints/{complaint_id}/status", response_model=ComplaintResponse)
+@router.patch("/complaints/{complaint_id}/status", response_model=ComplaintResponse)  # type: ignore[misc]
 async def update_complaint_status(
     complaint_id: uuid.UUID,
     payload: ComplaintStatusUpdate,
@@ -85,7 +85,7 @@ async def update_complaint_status(
     return ComplaintResponse.from_orm(complaint)
 
 
-@router.get("/stats", response_model=StatsResponse)
+@router.get("/stats", response_model=StatsResponse)  # type: ignore[misc]
 async def get_stats(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
