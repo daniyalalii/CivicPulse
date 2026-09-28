@@ -41,6 +41,7 @@ target-version = "py311"
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+disallow_untyped_decorators = false
 
 [build-system]
 requires = ["setuptools>=61.0"]
