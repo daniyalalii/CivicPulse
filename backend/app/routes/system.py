@@ -1,4 +1,8 @@
+from typing import Union, Any
+
 from fastapi import APIRouter, Depends, Response, status
+# from typing import Any  # removed duplicate import
+
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,13 +35,13 @@ FALLBACK_COUNTER = Counter(
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-async def liveness_health_check():
+async def liveness_health_check() -> dict[str, str]:
     """Liveness probe. MUST NOT touch the database."""
     return {"status": "healthy", "service": "civicpulse-backend"}
 
 
 @router.get("/ready")
-async def readiness_check(session: AsyncSession = Depends(get_session)):  # noqa: B008
+async def readiness_check(session: AsyncSession = Depends(get_session)) -> Union[dict[str, str], Response]:  # noqa: B008
     """Readiness probe. Checks Postgres connection."""
     errors = {}
 
@@ -57,13 +61,13 @@ async def readiness_check(session: AsyncSession = Depends(get_session)):  # noqa
 
 
 @router.get("/metrics")
-async def get_metrics():
+async def get_metrics() -> Response:
     """Prometheus metrics endpoint."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("/api/meta/providers")
-async def get_provider_meta():
+async def get_provider_meta() -> dict[str, Any]:
     """Observability endpoint surfacing current provider configuration."""
     return {
         "active_provider": settings.triage_provider,

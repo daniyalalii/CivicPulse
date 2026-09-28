@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,7 @@ from app.routes import complaints, system
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup phase
     yield
     # Graceful shutdown: dispose of DB engine pool connections on SIGTERM
@@ -37,7 +38,7 @@ app.add_middleware(
 
 
 @app.exception_handler(InvalidTransitionError)
-async def invalid_transition_handler(request: Request, exc: InvalidTransitionError):
+async def invalid_transition_handler(request: Request, exc: InvalidTransitionError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(exc), "error": "InvalidStatusTransition"},
@@ -45,7 +46,7 @@ async def invalid_transition_handler(request: Request, exc: InvalidTransitionErr
 
 
 @app.exception_handler(ComplaintNotFound)
-async def complaint_not_found_handler(request: Request, exc: ComplaintNotFound):
+async def complaint_not_found_handler(request: Request, exc: ComplaintNotFound) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc), "error": "ComplaintNotFound"},
@@ -53,7 +54,7 @@ async def complaint_not_found_handler(request: Request, exc: ComplaintNotFound):
 
 
 @app.exception_handler(RateLimited)
-async def rate_limited_handler(request: Request, exc: RateLimited):
+async def rate_limited_handler(request: Request, exc: RateLimited) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         content={"detail": str(exc), "error": "RateLimited"},

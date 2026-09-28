@@ -51,7 +51,7 @@ class LLMTriage:
     async def _call_llm(self, text: str, location: str) -> TriageResult:
         user_prompt = f"<user_complaint>\nLocation: {location}\nText: {text}\n</user_complaint>"
 
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -95,7 +95,8 @@ class LLMTriage:
                 await asyncio.sleep(jitter)
             except APIError as exc:
                 # Retry only on 5xx or 429
-                if exc.status_code and (exc.status_code >= 500 or exc.status_code == 429):
+                status_code = getattr(exc, "status_code", None)
+                if status_code and (status_code >= 500 or status_code == 429):
                     if attempt == attempts - 1:
                         raise
                     jitter = random.uniform(0.5, 1.5)
@@ -103,3 +104,5 @@ class LLMTriage:
                 else:
                     # 4xx or bad request - do not retry
                     raise
+        # If all attempts exhausted without returning, raise error
+        raise RuntimeError("LLM triage failed after retries")

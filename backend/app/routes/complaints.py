@@ -25,21 +25,23 @@ router = APIRouter(prefix="/api", tags=["complaints"])
 async def create_complaint(
     payload: ComplaintCreate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
-    return await complaints_service.create_and_triage_complaint(
+) -> ComplaintResponse:
+    complaint = await complaints_service.create_and_triage_complaint(
         session=session,
         text=payload.text,
         location=payload.location,
         reporter_contact=payload.reporter_contact,
     )
+    return ComplaintResponse.from_orm(complaint)
 
 
 @router.get("/complaints/{complaint_id}", response_model=ComplaintResponse)
 async def get_complaint(
     complaint_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
-    return await complaints_service.get_complaint(session, complaint_id)
+) -> ComplaintResponse:
+    complaint = await complaints_service.get_complaint(session, complaint_id)
+    return ComplaintResponse.from_orm(complaint)
 
 
 @router.get("/complaints", response_model=ComplaintListResponse)
@@ -50,7 +52,7 @@ async def list_complaints(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
+) -> ComplaintListResponse:
     items, total = await complaints_service.list_complaints_service(
         session=session,
         category=category,
@@ -59,8 +61,10 @@ async def list_complaints(
         page=page,
         page_size=page_size,
     )
+    # Convert ORM Complaint models to response schema
+    response_items = [ComplaintResponse.from_orm(item) for item in items]
     return ComplaintListResponse(
-        items=items,
+        items=response_items,
         total=total,
         page=page,
         page_size=page_size,
@@ -72,19 +76,20 @@ async def update_complaint_status(
     complaint_id: uuid.UUID,
     payload: ComplaintStatusUpdate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
-    return await complaints_service.update_complaint_status_service(
+) -> ComplaintResponse:
+    complaint = await complaints_service.update_complaint_status_service(
         session=session,
         complaint_id=complaint_id,
         new_status=payload.status,
     )
+    return ComplaintResponse.from_orm(complaint)
 
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-):
+) -> StatsResponse:
     response.headers["X-Cache"] = "MISS"
     stats = await complaints_service.get_complaint_stats_service(session)
     return StatsResponse(**stats)
