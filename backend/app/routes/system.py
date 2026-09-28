@@ -1,7 +1,6 @@
 from typing import Union, Any
 
 from fastapi import APIRouter, Depends, Response, status
-# from typing import Any  # removed duplicate import
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from sqlalchemy import text
@@ -40,8 +39,8 @@ async def liveness_health_check() -> dict[str, str]:
     return {"status": "healthy", "service": "civicpulse-backend"}
 
 
-@router.get("/ready")
-async def readiness_check(session: AsyncSession = Depends(get_session)) -> Union[dict[str, str], Response]:  # noqa: B008
+@router.get("/ready", response_model=None)
+async def readiness_check(session: AsyncSession = Depends(get_session)) -> dict[str, str] | Response:  # noqa: B008
     """Readiness probe. Checks Postgres connection."""
     errors = {}
 

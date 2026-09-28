@@ -61,10 +61,6 @@ class LLMTriage:
             temperature=0.1,
             max_tokens=200,
         )
-        # If the client returns a coroutine, await it; AsyncMock instances used in tests should not be awaited.
-        import inspect
-        if inspect.isawaitable(response) and response.__class__.__name__ != "AsyncMock":
-            response = await response
 
 
         content = response.choices[0].message.content or "{}"
