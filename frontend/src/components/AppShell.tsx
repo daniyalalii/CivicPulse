@@ -21,7 +21,6 @@ import {
   Menu,
   X,
   Search,
-  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';

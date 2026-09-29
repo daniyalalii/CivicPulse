@@ -385,7 +385,7 @@ export default function DashboardPage() {
                   data={categoryData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                   onMouseMove={(state) => {
-                    if (state.activeTooltipIndex !== undefined) {
+                    if (typeof state.activeTooltipIndex === 'number') {
                       setHoveredBarIndex(state.activeTooltipIndex);
                     }
                   }}
