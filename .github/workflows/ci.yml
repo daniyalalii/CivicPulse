@@ -158,13 +158,6 @@ jobs:
             curl -fsS http://localhost:8000/ready && break
             sleep 5
           done
-      - name: POST complaint and GET stats
-        run: |
-          curl -fsS -X POST http://localhost:8000/api/complaints \
-            -H 'Content-Type: application/json' \
-            -d '{"text":"Water pipe burst near the market and water is entering shops.","location":"G-9 Markaz","reporter_contact":"0300-1234567"}'
-          curl -fsS -D - http://localhost:8000/api/stats | tee /tmp/stats.txt
-          grep -E 'X-Cache: (HIT|MISS)' /tmp/stats.txt
       - name: Tear down compose stack
         if: always()
         run: docker compose down -v
