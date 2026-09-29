@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: civicpulse
-      POSTGRES_USER: civicpulse
-      POSTGRES_PASSWORD: civicpulse
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -56,9 +56,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://civicpulse:civicpulse@postgres:5432/civicpulse
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
-      TRIAGE_PROVIDER: simulated
+      TRIAGE_PROVIDER: ${TRIAGE_PROVIDER:-simulated}
     volumes:
       - ./backend:/app
     depends_on:
