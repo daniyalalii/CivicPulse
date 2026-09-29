@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 from typing import Any, Self, cast
@@ -21,24 +22,43 @@ class RedisCache:
         return cast(Self, cls._instance)
 
     def __init__(self) -> None:
-        if getattr(self, "_client", None) is None:
-            self._client = redis_asyncio.Redis.from_url(
+        self._client: redis_asyncio.Redis | None = getattr(self, "_client", None)
+        self._loop_id: int | None = getattr(self, "_loop_id", None)
+        self._ensure_client()
+
+    def _ensure_client(self) -> redis_asyncio.Redis:
+        try:
+            loop = asyncio.get_running_loop()
+            loop_id = id(loop)
+        except RuntimeError:
+            loop_id = None
+
+        client = self._client
+        if client is None or self._loop_id != loop_id:
+            client = redis_asyncio.Redis.from_url(
                 settings.redis_url,
                 decode_responses=True,
             )
+            self._client = client
+            self._loop_id = loop_id
+
+        assert client is not None
+        return client
 
     async def ping(self) -> bool:
+        client = self._ensure_client()
         try:
-            return bool(await self._client.ping())
-        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
+            return bool(await client.ping())
+        except (RedisError, RuntimeError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def get_json(self, key: str) -> Any | None:
+        client = self._ensure_client()
         if not await self.ping():
             return None
         try:
-            raw_value = await self._client.get(key)
-        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
+            raw_value = await client.get(key)
+        except (RedisError, RuntimeError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return None
         if raw_value is None:
             return None
@@ -48,36 +68,39 @@ class RedisCache:
             return None
 
     async def set_json(self, key: str, value: Any, ttl_seconds: int) -> bool:
+        client = self._ensure_client()
         if not await self.ping():
             return False
         try:
             payload = json.dumps(value, separators=(",", ":"), default=str)
-            await self._client.set(key, payload, ex=ttl_seconds)
+            await client.set(key, payload, ex=ttl_seconds)
             return True
-        except (RedisError, TimeoutError, TypeError, ValueError):  # pragma: no cover - infrastructure dependent
+        except (RedisError, RuntimeError, TimeoutError, TypeError, ValueError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def delete(self, key: str) -> bool:
+        client = self._ensure_client()
         if not await self.ping():
             return False
         try:
-            await self._client.delete(key)
+            await client.delete(key)
             return True
-        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
+        except (RedisError, RuntimeError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def rate_limit(self, client_ip: str, limit: int = 10, window_seconds: int = 60) -> None:
         """Reject clients who exceed the configured request quota for a sliding minute."""
+        client = self._ensure_client()
         if not await self.ping():
             return
 
         key = f"rate_limit:ip:{client_ip or 'unknown'}"
         try:
-            current = await self._client.incr(key)
+            current = await client.incr(key)
             if current == 1:
-                await self._client.expire(key, window_seconds)
-            ttl = max(int(await self._client.ttl(key) or window_seconds), 1)
-        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
+                await client.expire(key, window_seconds)
+            ttl = max(int(await client.ttl(key) or window_seconds), 1)
+        except (RedisError, RuntimeError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return
 
         if current > limit:
@@ -85,7 +108,7 @@ class RedisCache:
 
     @property
     def client(self) -> redis_asyncio.Redis:
-        return self._client
+        return self._ensure_client()
 
 
 cache = RedisCache()
