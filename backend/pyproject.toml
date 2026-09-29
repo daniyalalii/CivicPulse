@@ -10,6 +10,7 @@ dependencies = [
     "pydantic-settings>=2.2.0",
     "sqlalchemy[asyncio]>=2.0.28",
     "asyncpg>=0.29.0",
+    "aiosqlite>=0.20.0",
     "alembic>=1.13.0",
     "redis>=5.0.0",
     "openai>=1.14.0",
