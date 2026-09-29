@@ -96,6 +96,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build backend image
         run: docker build -t civicpulse-backend:test ./backend
+      - name: Save backend image artifact
+        run: docker save civicpulse-backend:test -o /tmp/civicpulse-backend.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: civicpulse-backend-image
+          path: /tmp/civicpulse-backend.tar
       # Frontend image build temporarily disabled while no frontend app is present.
       # - name: Build frontend image
       #   if: hashFiles('frontend/package.json') != ''
@@ -106,6 +112,13 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+      - name: Download backend image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: civicpulse-backend-image
+          path: /tmp
+      - name: Load backend image
+        run: docker load --input /tmp/civicpulse-backend.tar
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.74.0
