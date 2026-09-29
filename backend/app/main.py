@@ -10,6 +10,7 @@ from app.database import engine
 from app.domain import InvalidTransitionError
 from app.exceptions import ComplaintNotFound, RateLimited
 from app.routes import complaints, system
+from sqlalchemy import text
 
 
 @asynccontextmanager

@@ -25,7 +25,7 @@ def upgrade() -> None:
 
     op.create_table(
         'complaints',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
+        sa.Column('id', sa.Uuid(), primary_key=True, nullable=False),
         sa.Column('text', sa.Text(), nullable=False),
         sa.Column('location', sa.String(length=200), nullable=False),
         sa.Column('reporter_contact', sa.String(length=200), nullable=True),
@@ -48,6 +48,8 @@ def downgrade() -> None:
     op.drop_index('ix_complaints_created_at', table_name='complaints')
     op.drop_table('complaints')
 
-    sa.Enum(name='status_enum').drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name='priority_enum').drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name='category_enum').drop(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    if bind.dialect.name == 'postgresql':
+        sa.Enum(name='status_enum').drop(bind, checkfirst=True)
+        sa.Enum(name='priority_enum').drop(bind, checkfirst=True)
+        sa.Enum(name='category_enum').drop(bind, checkfirst=True)
