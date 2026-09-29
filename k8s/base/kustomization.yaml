@@ -11,5 +11,4 @@ resources:
   - services.yaml
   - ingress.yaml
   - hpa.yaml
-  - vpa.yaml
   - pdb.yaml

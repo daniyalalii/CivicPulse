@@ -74,13 +74,13 @@ jobs:
       - name: Apply production kustomize
         run: |
           kubectl apply -k k8s/overlays/prod
-          kubectl -n civicpulse set image deployment/backend backend=ghcr.io/${{ github.repository_owner }}/civicpulse-backend:${{ github.sha }}
-          kubectl -n civicpulse set image deployment/frontend frontend=ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:${{ github.sha }}
+          kubectl -n civicpulse-prod set image deployment/backend backend=ghcr.io/${{ github.repository_owner }}/civicpulse-backend:${{ github.sha }}
+          kubectl -n civicpulse-prod set image deployment/frontend frontend=ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:${{ github.sha }}
       - name: Wait for rollout
         run: |
-          kubectl -n civicpulse rollout status deployment/backend --timeout=180s
-          kubectl -n civicpulse rollout status deployment/frontend --timeout=180s
+          kubectl -n civicpulse-prod rollout status deployment/backend --timeout=180s
+          kubectl -n civicpulse-prod rollout status deployment/frontend --timeout=180s
       - name: Check ingress
         run: |
-          kubectl -n civicpulse get ingress
-          kubectl -n civicpulse describe ingress civicpulse
+          kubectl -n civicpulse-prod get ingress
+          kubectl -n civicpulse-prod describe ingress civicpulse
