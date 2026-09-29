@@ -1,0 +1,21 @@
+# Git metadata
+.git
+.gitignore
+
+# Virtual environments
+.venv
+venv
+
+# Python caches
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Local environment
+.env
+.env.*
+
+# Editor/OS noise
+.DS_Store

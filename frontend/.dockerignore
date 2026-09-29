@@ -1,0 +1,14 @@
+# Git metadata
+.git
+.gitignore
+
+# Node dependencies and build output
+node_modules
+npm-debug.log*
+
+# Local environment
+.env
+.env.*
+
+# Editor/OS noise
+.DS_Store
