@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: civicpulse-config
+  namespace: civicpulse
+data:
+  APP_ENV: dev
+  DATABASE_URL: postgresql+asyncpg://civicpulse:civicpulse@postgres:5432/civicpulse
+  REDIS_URL: redis://redis:6379/0
+  TRIAGE_PROVIDER: simulated
+  FRONTEND_API_BASE: http://backend:8000
