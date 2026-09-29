@@ -1,8 +1,10 @@
 import hashlib
 import json
-from typing import Any
+from typing import Any, Self, cast
 
+from fastapi import Request
 from redis import asyncio as redis_asyncio
+from redis.exceptions import RedisError
 
 from app.config import settings
 from app.exceptions import RateLimited
@@ -13,10 +15,10 @@ class RedisCache:
 
     _instance: "RedisCache | None" = None
 
-    def __new__(cls) -> "RedisCache":
+    def __new__(cls) -> Self:
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+            cls._instance = cast("RedisCache | None", super().__new__(cls))
+        return cast(Self, cls._instance)
 
     def __init__(self) -> None:
         if getattr(self, "_client", None) is None:
@@ -28,7 +30,7 @@ class RedisCache:
     async def ping(self) -> bool:
         try:
             return bool(await self._client.ping())
-        except Exception:  # pragma: no cover - infrastructure dependent
+        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def get_json(self, key: str) -> Any | None:
@@ -36,7 +38,7 @@ class RedisCache:
             return None
         try:
             raw_value = await self._client.get(key)
-        except Exception:  # pragma: no cover - infrastructure dependent
+        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return None
         if raw_value is None:
             return None
@@ -52,7 +54,7 @@ class RedisCache:
             payload = json.dumps(value, separators=(",", ":"), default=str)
             await self._client.set(key, payload, ex=ttl_seconds)
             return True
-        except Exception:  # pragma: no cover - infrastructure dependent
+        except (RedisError, TimeoutError, TypeError, ValueError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def delete(self, key: str) -> bool:
@@ -61,7 +63,7 @@ class RedisCache:
         try:
             await self._client.delete(key)
             return True
-        except Exception:  # pragma: no cover - infrastructure dependent
+        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return False
 
     async def rate_limit(self, client_ip: str, limit: int = 10, window_seconds: int = 60) -> None:
@@ -75,21 +77,21 @@ class RedisCache:
             if current == 1:
                 await self._client.expire(key, window_seconds)
             ttl = max(int(await self._client.ttl(key) or window_seconds), 1)
-        except Exception:  # pragma: no cover - infrastructure dependent
+        except (RedisError, TimeoutError):  # pragma: no cover - infrastructure dependent
             return
 
         if current > limit:
             raise RateLimited(retry_after=ttl)
 
     @property
-    def client(self):
+    def client(self) -> redis_asyncio.Redis:
         return self._client
 
 
 cache = RedisCache()
 
 
-def get_client_ip(request) -> str:
+def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()

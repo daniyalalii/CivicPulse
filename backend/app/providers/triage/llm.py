@@ -122,9 +122,4 @@ class LLMTriage:
                     jitter = random.uniform(0.5, 1.5)
                     await asyncio.sleep(jitter)
                 raise
-            except asyncio.TimeoutError:
-                if attempt == attempts - 1:
-                    raise
-                jitter = random.uniform(0.5, 1.5)
-                await asyncio.sleep(jitter)
         raise RuntimeError("LLM triage failed after retries")
