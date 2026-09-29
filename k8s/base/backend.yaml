@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: civicpulse-backend:latest
+          image: civicpulse-backend:${IMAGE_TAG}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
