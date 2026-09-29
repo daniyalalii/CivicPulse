@@ -108,7 +108,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.63.0
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.63.0
       - name: Scan backend image
         run: trivy image --severity HIGH,CRITICAL --exit-code 1 civicpulse-backend:test
       # Frontend image scan temporarily disabled while no frontend app is present.
