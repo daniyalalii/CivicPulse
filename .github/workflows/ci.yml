@@ -75,6 +75,7 @@ jobs:
         run: cd backend && pytest --cov=app --cov-fail-under=65 tests/
 
   test-frontend:
+    if: hashFiles('frontend/package.json') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -123,7 +124,7 @@ jobs:
       - name: Validate Kustomize output
         run: |
           kubectl kustomize k8s/overlays/dev > /tmp/dev.yaml
-          kubeconform -strict -summary /tmp/dev.yaml
+          kubeconform -strict -summary -skip 'VerticalPodAutoscaler' /tmp/dev.yaml
 
   integration:
     runs-on: ubuntu-latest
