@@ -1,10 +1,15 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.domain import Category, Priority, Status
+from app.providers.cache import (
+    build_stats_cache_key,
+    cache,
+    get_client_ip,
+)
 from app.routes.schemas import (
     ComplaintCreate,
     ComplaintListResponse,
@@ -23,15 +28,20 @@ router = APIRouter(prefix="/api", tags=["complaints"])
     status_code=status.HTTP_201_CREATED,
 )  
 async def create_complaint(
+    request: Request,
     payload: ComplaintCreate,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> ComplaintResponse:
+    client_ip = get_client_ip(request)
+    await cache.rate_limit(client_ip, limit=10, window_seconds=60)
+
     complaint = await complaints_service.create_and_triage_complaint(
         session=session,
         text=payload.text,
         location=payload.location,
         reporter_contact=payload.reporter_contact,
     )
+    await cache.delete(build_stats_cache_key())
     return ComplaintResponse.from_orm(complaint)
 
 
@@ -90,6 +100,13 @@ async def get_stats(
     response: Response,
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> StatsResponse:
+    cache_key = build_stats_cache_key()
+    cached_stats = await cache.get_json(cache_key)
+    if cached_stats is not None:
+        response.headers["X-Cache"] = "HIT"
+        return StatsResponse(**cached_stats)
+
     response.headers["X-Cache"] = "MISS"
     stats = await complaints_service.get_complaint_stats_service(session)
+    await cache.set_json(cache_key, stats, ttl_seconds=30)
     return StatsResponse(**stats)

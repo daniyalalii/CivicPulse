@@ -1,0 +1,88 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: civicpulse
+          POSTGRES_PASSWORD: civicpulse
+          POSTGRES_DB: civicpulse
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql+asyncpg://civicpulse:civicpulse@localhost:5432/civicpulse
+      REDIS_URL: redis://localhost:6379/0
+      TRIAGE_PROVIDER: simulated
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Run Alembic migrations
+        run: cd backend && alembic upgrade head
+      - name: Run backend tests
+        run: cd backend && pytest --cov=app --cov-fail-under=65 tests/
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push backend image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/civicpulse-backend:${{ github.sha }} -t ghcr.io/${{ github.repository_owner }}/civicpulse-backend:latest ./backend
+          docker push ghcr.io/${{ github.repository_owner }}/civicpulse-backend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/civicpulse-backend:latest
+      - name: Build and push frontend image
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:${{ github.sha }} -t ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:latest ./frontend
+          docker push ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:latest
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Generate SBOM
+        run: |
+          syft dir:. -o spdx-json=sbom.spdx.json
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d cluster create civicpulse --agents 1
+      - name: Apply production kustomize
+        run: |
+          kubectl apply -k k8s/overlays/prod
+          kubectl -n civicpulse set image deployment/backend backend=ghcr.io/${{ github.repository_owner }}/civicpulse-backend:${{ github.sha }}
+          kubectl -n civicpulse set image deployment/frontend frontend=ghcr.io/${{ github.repository_owner }}/civicpulse-frontend:${{ github.sha }}
+      - name: Wait for rollout
+        run: |
+          kubectl -n civicpulse rollout status deployment/backend --timeout=180s
+          kubectl -n civicpulse rollout status deployment/frontend --timeout=180s
+      - name: Check ingress
+        run: |
+          kubectl -n civicpulse get ingress
+          kubectl -n civicpulse describe ingress civicpulse

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import re
 from typing import Any
 
 import httpx
@@ -8,6 +9,7 @@ from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI, R
 
 from app.config import settings
 from app.domain import Category, Priority
+from app.providers.cache import build_llm_cache_key, cache
 from app.providers.triage.base import TriageResult
 
 SYSTEM_PROMPT = """You are an expert municipal complaint triage assistant.
@@ -49,8 +51,18 @@ class LLMTriage:
             timeout=10.0,
         )
 
+    @staticmethod
+    def _sanitize_user_prompt(text: str, location: str) -> str:
+        cleaned = re.sub(r"(?is)(?:ignore|override|disregard|forget|bypass|system|developer|assistant).*?(?:instructions|prompt|rules)?[.;\n]", " ", text)
+        cleaned = re.sub(r"(?is)\b(?:return|output|respond|answer)\b.*?\b(?:low|normal|high|water|electricity|sanitation|roads|streetlights|other)\b.*?[.;\n]", " ", cleaned)
+        cleaned = re.sub(r"(?is)\b(?:category|priority)\s*[:=]\s*(?:low|normal|high|water|electricity|sanitation|roads|streetlights|other)\b", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if not cleaned:
+            cleaned = "Citizen complaint"
+        return f"<user_complaint>\nLocation: {location}\nText: {cleaned}\n</user_complaint>"
+
     async def _call_llm(self, text: str, location: str) -> TriageResult:
-        user_prompt = f"<user_complaint>\nLocation: {location}\nText: {text}\n</user_complaint>"
+        user_prompt = self._sanitize_user_prompt(text, location)
 
         response: Any = self.client.chat.completions.create(
             model=self.model,
@@ -62,49 +74,52 @@ class LLMTriage:
             temperature=0.1,
             max_tokens=200,
         )
-        # If the client returns a coroutine (unlikely), await it unless it's an AsyncMock used in tests.
         import inspect
         if inspect.isawaitable(response) and response.__class__.__name__ != "AsyncMock":
             response = await response
 
-
-
         content = response.choices[0].message.content or "{}"
         parsed = json.loads(content)
 
-        # Enforce validation against schema
-        return TriageResult(
+        result = TriageResult(
             category=Category(parsed.get("category", "other")),
             priority=Priority(parsed.get("priority", "normal")),
             summary=str(parsed.get("summary", text[:140]))[:140],
             confidence=float(parsed.get("confidence", 0.9)),
         )
+        return result
 
     async def triage(self, text: str, location: str) -> TriageResult:
         if not self.api_key:
             raise ValueError("GROQ API key is missing")
 
-        # Retry attempt count: max 1 retry with jitter on timeout/429/5xx
+        cache_key = build_llm_cache_key(text, location)
+        cached_payload = await cache.get_json(cache_key)
+        if cached_payload:
+            return TriageResult(
+                category=Category(cached_payload.get("category", "other")),
+                priority=Priority(cached_payload.get("priority", "normal")),
+                summary=str(cached_payload.get("summary", ""))[:140],
+                confidence=float(cached_payload.get("confidence", 0.9)),
+            )
+
         attempts = 2
         for attempt in range(attempts):
             try:
-                return await self._call_llm(text, location)
+                result = await asyncio.wait_for(self._call_llm(text, location), timeout=10.0)
+                await cache.set_json(cache_key, result.model_dump(mode="json"), ttl_seconds=86400)
+                return result
             except (TimeoutError, APITimeoutError, RateLimitError, APIConnectionError, httpx.HTTPError):
                 if attempt == attempts - 1:
                     raise
-                # Single jittered retry (0.5 to 1.5 seconds)
                 jitter = random.uniform(0.5, 1.5)
                 await asyncio.sleep(jitter)
             except APIError as exc:
-                # Retry only on 5xx or 429
                 status_code = getattr(exc, "status_code", None)
-                if status_code and (status_code >= 500 or status_code == 429):
+                if status_code is not None and (status_code == 429 or status_code >= 500):
                     if attempt == attempts - 1:
                         raise
                     jitter = random.uniform(0.5, 1.5)
                     await asyncio.sleep(jitter)
-                else:
-                    # 4xx or bad request - do not retry
-                    raise
-        # If all attempts exhausted without returning, raise error
+                raise
         raise RuntimeError("LLM triage failed after retries")
