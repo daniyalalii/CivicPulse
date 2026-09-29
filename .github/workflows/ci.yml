@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev, feat/dockub]
+    branches: [main, dev, feat/dockub, feat/ci-pipeline]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, feat/ci-pipeline]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
