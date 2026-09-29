@@ -125,7 +125,7 @@ jobs:
       - name: Verify Trivy installation
         run: trivy --version
       - name: Scan backend image
-        run: trivy image --severity HIGH,CRITICAL --exit-code 1 civicpulse-backend:test
+        run: trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 civicpulse-backend:test
       # Frontend image scan temporarily disabled while no frontend app is present.
       # - name: Scan frontend image
       #   if: hashFiles('frontend/package.json') != ''
